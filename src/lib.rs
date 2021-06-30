@@ -4,7 +4,6 @@ type NodePointer = Rc<RefCell<Node>>;
 type Input = Vec<Vec<NodePointer>>;
 
 /// Unidirectional, weighted edge to a `Node`.
-#[derive(Default)]
 pub struct Edge {
 	/// Weight of the edge.
 	weight: usize, // Assume no negative values, so we are using unsigned integers.
@@ -13,7 +12,7 @@ pub struct Edge {
 }
 
 impl Edge {
-	fn new(weight: usize, destination: NodePointer) -> Self {
+	pub fn new(weight: usize, destination: NodePointer) -> Self {
 		Edge { weight, destination }
 	}
 }
@@ -37,39 +36,39 @@ impl Node {
 
 // Given an NxN matrix of connected “nodes” with weighted edges, where a node in
 // row i can only connect to nodes in row i+1, find the least cost path from row
-// 0 to row N-1
+// 0 to row N-16
 // Inputs: 2d matrix of elements of type `Node`
 // Output: ~~integer~~ `Option<usize>` where `None` denotes no possible path
 //
 // Assumes inputs are validated
-pub fn min_path_cost(mut input: Input) -> Option<usize> {
+pub fn min_path_cost(input: Input) -> Option<usize> {
 	let mut final_min_path = None;
 	let last_row = input.len() - 1;
 
-	for (row_idx, row) in input.iter_mut().enumerate() {
+	for (row_idx, row) in input.iter().enumerate() {
 		for node in row.iter() {
 			let node = node.borrow_mut();
 			if row_idx != 0 && node.maybe_min_path.is_none() {
-				// This is an inaccessible node.
+				// We are at an inaccessible node.
 				continue;
 			} else if row_idx == last_row {
-				// If we are on the last row we look for the min path to get here.
+				// We are on the last row we look for the min path to get here.
 				if let Some(min_path) = node.maybe_min_path {
 					if final_min_path.unwrap_or(usize::MAX) > min_path {
 						final_min_path = Some(min_path)
 					}
 				}
 			} else {
-				// We are at a node in the middle of the graph
+				// We are at a non-terminal node.
 				for edge in node.edges.iter() {
 					let weight_to_dest = if row_idx == 0 {
-						// This is a initiating leaf node, so the path only consists of 1 edge.
+						// This is a starting node, so the path only consists of 1 edge.
 						edge.weight
 					} else if let Some(src_min_path) = node.maybe_min_path {
 						edge.weight + src_min_path
 					} else {
 						// We already skipped non-accessible nodes, thus `node.maybe_min_path`
-						//  is always `Some` we should never reach here.
+						// is always `Some` so we should never reach here.
 						continue;
 					};
 
@@ -110,17 +109,17 @@ mod tests {
 		let r2c0 = node_pointer(vec![]);
 		let r2c1 = node_pointer(vec![]);
 
-		let r1c0 = node_pointer(vec![Edge::new(5, r2c0.clone())]);
-		let r1c1 = node_pointer(vec![Edge::new(4, r2c0.clone()), Edge::new(2, r2c1.clone())]);
+		let r1c0 = node_pointer(vec![Edge::new(6, r2c0.clone())]);
+		let r1c1 = node_pointer(vec![Edge::new(4, r2c0.clone()), Edge::new(5, r2c1.clone())]);
 
-		let r0c0 = node_pointer(vec![Edge::new(1, r1c0.clone()), Edge::new(2, r1c1.clone())]);
-		let r0c1 = node_pointer(vec![Edge::new(0, r1c0.clone()), Edge::new(3, r1c1.clone())]);
+		let r0c0 = node_pointer(vec![Edge::new(2, r1c0.clone()), Edge::new(3, r1c1.clone())]);
+		let r0c1 = node_pointer(vec![Edge::new(0, r1c0.clone()), Edge::new(1, r1c1.clone())]);
 
 		let simple_input = vec![
 			vec![r0c0, r0c1],
 			vec![r1c0, r1c1],
 			vec![r2c0, r2c1]
 		];
-		assert_eq!(min_path_cost(simple_input), Some(4));
+		assert_eq!(min_path_cost(simple_input), Some(5));
 	}
 }
